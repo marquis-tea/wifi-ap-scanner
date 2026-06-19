@@ -1,7 +1,5 @@
-# ==========================================
-# FILE: main.py
-# DESCRIPTION: The main entry point linking frontend and backend.
-# ==========================================
+# The main file that links the backend scanning logic with the frontend UI. 
+# Run this file to start the application.
 
 import tkinter as tk
 from scanner_backend import get_wifi_networks
