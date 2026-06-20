@@ -1,5 +1,8 @@
-# The main file that links the backend scanning logic with the frontend UI. 
-# Run this file to start the application.
+# The main file that links the backend scanning logic with the frontend UI. Run this file to start the application.
+
+# !! REQUIREMENTS !!
+# Windows 10/11 with Python 3.12+
+# pip install winsdk
 
 import tkinter as tk
 from scanner_backend import get_wifi_networks

@@ -1,63 +1,64 @@
-import time
-import pywifi
-from pywifi import const
+import asyncio
+import platform
 
-def get_wifi_networks():
+try:
+    from winsdk.windows.devices.wifi import WiFiAdapter
+except ImportError:
+    print("Error: The 'winsdk' library is missing. Please run: pip install winsdk")
+    WiFiAdapter = None
+
+async def _scan_winrt_async():
     """
-    Scans the air for Wi-Fi access points and returns a list of dictionaries.
+    Asynchronously communicates with the Windows Runtime (WinRT) 
+    to command the physical Wi-Fi adapter to scan the airwaves.
     """
+    if not WiFiAdapter:
+        return []
+
+    # Request access to the Wi-Fi hardware
+    adapters_result = await WiFiAdapter.find_all_adapters_async()
     
-    wifi = pywifi.PyWiFi()
-    
-    # Check if any wireless interfaces are available
-    if not wifi.interfaces():
-        print("Error: No Wi-Fi interfaces found. Ensure Wi-Fi is enabled.")
+    if not adapters_result or adapters_result.size == 0:
+        print("Error: No Wi-Fi adapters found via WinRT.")
         return []
         
-    iface = wifi.interfaces()[0]
-    
-    # Disconnect temporarily if needed to ensure a clean scan
-    iface.disconnect()
-    time.sleep(1)
+    # Grab the primary physical Wi-Fi adapter
+    adapter = adapters_result.get_at(0)
     
     # Trigger the hardware scan
-    iface.scan()
-    time.sleep(4)
+    await adapter.scan_async()
     
-    # Fetch the raw scan results from the OS
-    scan_results = iface.scan_results()
-    
-    # Filter out duplicates
+    # Retrieve the generated report natively from the OS
+    report = adapter.network_report
     networks_dict = {}
     
-    for profile in scan_results:
-        ssid = profile.ssid
-        bssid = profile.bssid
-        rssi = profile.signal
-        
-        # Handle hidden networks (empty SSID)
-        if not ssid or ssid.strip() == "":
+    # Iterate through all detected network APs
+    for network in report.available_networks:
+        ssid = network.ssid
+        if not ssid:
             ssid = "[Hidden Network]"
             
-        # Categorise security type based on AKM (Authentication and Key Management)
-        security = "Open"
-        if profile.akm:
-            akm_val = profile.akm[-1] # Fetch the highest security protocol listed
-            if akm_val == const.AKM_TYPE_WPA:
-                security = "WPA"
-            elif akm_val in (const.AKM_TYPE_WPA2, const.AKM_TYPE_WPA2PSK):
-                security = "WPA2"
-            elif hasattr(const, 'AKM_TYPE_WPA3') and akm_val == getattr(const, 'AKM_TYPE_WPA3'):
-                security = "WPA3"
-            elif akm_val == const.AKM_TYPE_NONE:
-                security = "Open"
-            else:
-                security = "Secured"
+        bssid = network.bssid.upper()
+        rssi = network.network_rssi_in_decibel_milliwatts
+        
+        # Convert frequency from kHz to MHz to determine the Wi-Fi channel
+        freq_mhz = network.channel_center_frequency_in_kilohertz / 1000
+        channel = get_channel_from_freq(freq_mhz)
+        
+        # Categorise the security protocol
+        auth_type = network.security_settings.network_authentication_type.name
+        
+        security = "Secured"
+        if "WPA3" in auth_type:
+            security = "WPA3"
+        elif "RSNA" in auth_type:
+            security = "WPA2"
+        elif "WPA" in auth_type:
+            security = "WPA"
+        elif "OPEN" in auth_type or "None" in auth_type:
+            security = "Open"
 
-        # Determine the Wi-Fi channel from the raw frequency
-        channel = get_channel_from_freq(profile.freq)
-
-        # Update the dictionary. If we see the same BSSID again, keep the one with the stronger signal.
+        # Filter duplicates, storing only the router broadcast with the strongest signal
         if bssid not in networks_dict or rssi > networks_dict[bssid]['rssi']:
             networks_dict[bssid] = {
                 "ssid": ssid,
@@ -67,18 +68,24 @@ def get_wifi_networks():
                 "security": security
             }
             
-    # Convert the filtered dictionary back into a standard list
-    processed_results = list(networks_dict.values())
-    
-    # Sort networks by signal strength (RSSI) before returning
-    sorted_networks = sorted(processed_results, key=lambda x: x['rssi'], reverse=True)
-    
-    return sorted_networks
+    # Return the final dictionary as a sorted list
+    return sorted(networks_dict.values(), key=lambda x: x['rssi'], reverse=True)
+
+def get_wifi_networks():
+    """
+    Synchronous wrapper for the Tkinter frontend to call.
+    It initialises the asyncio event loop and runs the WinRT scanner.
+    """
+    if platform.system() != "Windows":
+        print("Error: The WinRT API is strictly for Windows 10/11.")
+        return []
+        
+    # Run the asynchronous scan and return the results cleanly to the UI
+    return asyncio.run(_scan_winrt_async())
 
 def get_channel_from_freq(freq):
     """
     Helper function to convert frequency (in MHz) to standard Wi-Fi channels.
-    Finds the 2.4 GHz and 5GHz channels.
     """
     try:
         freq = int(freq)

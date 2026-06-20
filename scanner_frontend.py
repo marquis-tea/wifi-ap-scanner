@@ -1,9 +1,3 @@
-# ==========================================
-# DEVELOPER: Member 1 (UI/Frontend)
-# FILE: scanner_frontend.py
-# DESCRIPTION: Fixed premium UI with custom cell bars and diagnostic dashboard.
-# ==========================================
-
 import tkinter as tk
 from tkinter import ttk
 
@@ -12,12 +6,12 @@ class WifiScannerApp:
         self.root = root
         self.root.title("Desktop Wi-Fi AP Scanner")
         self.root.geometry("900x580")
-        self.root.configure(bg="#0F1016")  # Premium, ultra-dark obsidian background
+        self.root.configure(bg="#0F1016")
         
         # Link the backend system callback
         self.scan_callback = scan_callback
         
-        # --- UI Color Palette ---
+        # UI Color Palette
         self.bg_dark = "#0F1016"
         self.card_bg = "#171923"
         self.accent_green = "#10B981"
@@ -28,7 +22,7 @@ class WifiScannerApp:
         # Configure the Advanced TTK Style Engine for custom table looks
         self.setup_styles()
         
-        # 1. TOP HEADER DASHBOARD
+        # TOP HEADER DASHBOARD
         self.header_frame = tk.Frame(root, bg=self.bg_dark)
         self.header_frame.pack(fill="x", padx=35, pady=(30, 15))
         
@@ -53,7 +47,7 @@ class WifiScannerApp:
         )
         self.status_label.pack(anchor="w", pady=(2, 0))
         
-        # Futuristic Cyberpunk Style Action Button (Fixed layout bug)
+        # Futuristic Cyberpunk Style Action Button
         self.scan_button = tk.Button(
             self.header_frame, 
             text="⚡ INITIALIZE SCAN", 
@@ -71,7 +65,7 @@ class WifiScannerApp:
         )
         self.scan_button.pack(side="right", pady=5)
 
-        # 2. MINI METRIC DASHBOARD CARDS
+        # MINI METRIC DASHBOARD CARDS
         self.metrics_frame = tk.Frame(root, bg=self.bg_dark)
         self.metrics_frame.pack(fill="x", padx=35, pady=(0, 20))
         
@@ -79,7 +73,7 @@ class WifiScannerApp:
         self.card_secure = self.create_metric_card(self.metrics_frame, "SECURE NETWORKS", "0", self.accent_green)
         self.card_best = self.create_metric_card(self.metrics_frame, "BEST SIGNAL", "N/A", "#8B5CF6")
 
-        # 3. MAIN DATA TABLE AREA WITH GRAPHICS CONTAINER
+        # MAIN DATA TABLE AREA WITH GRAPHICS CONTAINER
         self.table_container = tk.Frame(root, bg=self.card_bg, bd=1, highlightbackground="#2D3748", highlightthickness=1)
         self.table_container.pack(fill="both", expand=True, padx=35, pady=(0, 30))
         
